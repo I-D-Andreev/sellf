@@ -1,0 +1,9 @@
+## Interface: 80205
+## Title: Sell Fast
+## Author: Ivan
+## Version: 1
+
+SellF.lua
+
+-- Current patch: 8.2.5
+-- Command to get the patch number: /run print((select(4, GetBuildInfo())));
