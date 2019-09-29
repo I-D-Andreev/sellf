@@ -11,6 +11,7 @@ local prices = {}
 ------------------------------------
 -----        SCANS AH         ------
 ------------------------------------
+local itemNumber = 1;   -- defined in the array above, keeps track of which item we are currently scanning for
 local frame1 = CreateFrame("Frame")
 frame1:RegisterEvent("AUCTION_HOUSE_SHOW")
 frame1:SetScript("OnEvent", function(self, event, ...)
@@ -19,13 +20,22 @@ frame1:SetScript("OnEvent", function(self, event, ...)
         SortAuctionClearSort("list")
         SortAuctionSetSort("list", "unitprice", false)
         SortAuctionApplySort("list")
-
-        scanAH(1)
+        itemNumber = 0
+        queryAH()
     end
 end)
 
+function queryAH()
+    local canQuery,_ = CanSendAuctionQuery()
+    if canQuery then
+        itemNumber = itemNumber + 1
+        scanAH()
+    else
+        C_Timer.After(1.2, function() queryAH() end)
+    end
+end
 
-function scanAH(itemNumber) -- starting from 1; defined in the array at the top 
+function scanAH()
     if(itemNumber>table.getn(mats_array)) then
         print("--- Finished Scanning ---")
         SHOULD_SCAN_AH = false
@@ -33,17 +43,26 @@ function scanAH(itemNumber) -- starting from 1; defined in the array at the top
     end
 
     print("Scanning for item: "..mats_array[itemNumber])
-    QueryAuctionItems(mats_array[itemNumber], nil, nil, 0, false, 0, false, false, nil)
-    C_Timer.After(3, function() getPrice(itemNumber) end)
-    C_Timer.After(4, function() scanAH(itemNumber+1) end)
+    QueryAuctionItems(mats_array[itemNumber], nil, nil, 0, false, 0, false, false, nil) -- triggers event AUCTION_ITEM_LIST_UPDATE
 end
 
-function getPrice(itemID)
+
+local frame3 = CreateFrame("Frame")
+frame3:RegisterEvent("AUCTION_ITEM_LIST_UPDATE")
+frame3:SetScript("OnEvent", function(self, event, ...)
+    -- event is triggered when QueryAuctionItems is called
+    getPrice()
+end)
+
+
+function getPrice()
     local name, _, count, _, _, _, _,minBid,_,buyoutPrice, _, _, _, owner, _, saleStatus, _, _=GetAuctionItemInfo("list", 1)
-    prices[mats_array[itemID]] = math.floor(buyoutPrice/count)
-    local g, s, c = copperConverter(prices[mats_array[itemID]])
+    prices[mats_array[itemNumber]] = math.floor(buyoutPrice/count)
+    local g, s, c = copperConverter(prices[mats_array[itemNumber]])
     print(name.."  -  "..g.."g "..s.."s "..c.."c")
+   queryAH() -- call for the next item
 end
+
 
 
 function copperConverter(priceInCopper)
