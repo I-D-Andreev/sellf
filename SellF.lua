@@ -138,8 +138,10 @@ function fillInData(itemName, prevIndex, count)  --fills in the data
 
 
     -- set auction sell to be Per Unit
-    PriceDropDownButton:Click("LeftButton", true)
-    DropDownList1Button1:Click("LeftButton", true)
+    -- AuctionFrameAuctions.priceType = 1;
+    -- UIDropDownMenu_SetSelectedValue(PriceDropDown, AuctionFrameAuctions.priceType)
+    PriceDropDownButton:Click("RightButton", false)
+    DropDownList1Button1:Click("RightButton", false)
 
     local price = prices[itemName] - UNDERCUT_AMOUNT
 
