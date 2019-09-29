@@ -1,6 +1,6 @@
 ## Interface: 80205
 ## Title: Sell Fast
-## Notes: Splits stack of mats into smaller chunks and sells them on the AH.
+## Notes: Splits stack of mats into smaller chunks and fills in the data for you to sell on the AH.
 ## Author: Ivan
 ## Version: 1
 
