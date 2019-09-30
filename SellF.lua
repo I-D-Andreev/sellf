@@ -40,7 +40,11 @@ end
 
 function scanAH()
     if(itemNumber>table.getn(mats_array)) then
-        print("--- Finished Scanning ---")
+        print("--------------------------------------------------------")
+        print("             Finished Scanning")
+        print("         SellF will not scan anymore")
+        print("    If you need another scan, do /reload")
+        print("--------------------------------------------------------")
         SHOULD_SCAN_AH = false
         return
     end
@@ -127,15 +131,15 @@ frame2:SetScript("OnEvent", function(self, event, ...)
 
     if(name~=nil) then
         if(PREVIOUS_ITEM_SOLD == name) then
-            C_Timer.After(0.5, function() fillInData(name, PREVIOUS_ITEM_SOLD_INDEX, count) end)
+            C_Timer.After(0.2, function() fillInData(name, PREVIOUS_ITEM_SOLD_INDEX, count) end)
             C_Timer.After(0.8, function() PREVIOUS_ITEM_SOLD_INDEX = PREVIOUS_ITEM_SOLD_INDEX + 1 end)
         else
             PREVIOUS_ITEM_SOLD = name
             PREVIOUS_ITEM_SOLD_INDEX = 0
             stack_sizes = {}
-            if prices[itemName] ~= nil then  -- might be an item we haven't scanned
+            if prices[name] ~= nil then  -- might be an item we haven't scanned
                 calculateStackSizesAndStep(name, count)
-                C_Timer.After(0.5, function() fillInData(name, PREVIOUS_ITEM_SOLD_INDEX, count) end)
+                C_Timer.After(0.2, function() fillInData(name, PREVIOUS_ITEM_SOLD_INDEX, count) end)
                 C_Timer.After(0.8, function() PREVIOUS_ITEM_SOLD_INDEX = PREVIOUS_ITEM_SOLD_INDEX + 1 end)
             end
         end
