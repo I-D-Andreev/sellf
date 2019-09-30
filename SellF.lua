@@ -11,7 +11,8 @@ local prices = {}
 ------------------------------------
 -----        SCANS AH         ------
 ------------------------------------
-local itemNumber = 1;   -- defined in the array above, keeps track of which item we are currently scanning for
+local itemNumber = 0;   -- defined in the array above, keeps track of which item we are currently scanning for
+local already_updated_event = {}
 local frame1 = CreateFrame("Frame")
 frame1:RegisterEvent("AUCTION_HOUSE_SHOW")
 frame1:SetScript("OnEvent", function(self, event, ...)
@@ -20,7 +21,9 @@ frame1:SetScript("OnEvent", function(self, event, ...)
         SortAuctionClearSort("list")
         SortAuctionSetSort("list", "unitprice", false)
         SortAuctionApplySort("list")
+        -- set variables
         itemNumber = 0
+        for i=1, table.getn(mats_array) do already_updated_event[i] = false end
         queryAH()
     end
 end)
@@ -31,7 +34,7 @@ function queryAH()
         itemNumber = itemNumber + 1
         scanAH()
     else
-        C_Timer.After(1.2, function() queryAH() end)
+        C_Timer.After(0.3, function() queryAH() end)
     end
 end
 
@@ -51,7 +54,13 @@ local frame3 = CreateFrame("Frame")
 frame3:RegisterEvent("AUCTION_ITEM_LIST_UPDATE")
 frame3:SetScript("OnEvent", function(self, event, ...)
     -- event is triggered when QueryAuctionItems is called
-    getPrice()
+    -- sometimes triggered twice, so already_updated_event[itemNumber] keeps track if has already been called
+    if not already_updated_event[itemNumber] then 
+        already_updated_event[itemNumber] = true
+        getPrice()
+    else
+        return
+    end
 end)
 
 
@@ -114,18 +123,21 @@ local frame2 = CreateFrame("Frame")
 frame2:RegisterEvent("NEW_AUCTION_UPDATE")
 frame2:SetScript("OnEvent", function(self, event, ...)
     local name, _, _, _, _, _, _, _, count, _ = GetAuctionSellItemInfo();
+    setPerUnit()
 
     if(name~=nil) then
         if(PREVIOUS_ITEM_SOLD == name) then
-            C_Timer.After(0.3, function() fillInData(name, PREVIOUS_ITEM_SOLD_INDEX, count) end)
-            C_Timer.After(0.6, function() PREVIOUS_ITEM_SOLD_INDEX = PREVIOUS_ITEM_SOLD_INDEX + 1 end)
+            C_Timer.After(0.5, function() fillInData(name, PREVIOUS_ITEM_SOLD_INDEX, count) end)
+            C_Timer.After(0.8, function() PREVIOUS_ITEM_SOLD_INDEX = PREVIOUS_ITEM_SOLD_INDEX + 1 end)
         else
             PREVIOUS_ITEM_SOLD = name
             PREVIOUS_ITEM_SOLD_INDEX = 0
             stack_sizes = {}
-            calculateStackSizesAndStep(name, count)
-            C_Timer.After(0.3, function() fillInData(name, PREVIOUS_ITEM_SOLD_INDEX, count) end)
-            C_Timer.After(0.6, function() PREVIOUS_ITEM_SOLD_INDEX = PREVIOUS_ITEM_SOLD_INDEX + 1 end)
+            if prices[itemName] ~= nil then  -- might be an item we haven't scanned
+                calculateStackSizesAndStep(name, count)
+                C_Timer.After(0.5, function() fillInData(name, PREVIOUS_ITEM_SOLD_INDEX, count) end)
+                C_Timer.After(0.8, function() PREVIOUS_ITEM_SOLD_INDEX = PREVIOUS_ITEM_SOLD_INDEX + 1 end)
+            end
         end
     end
 
@@ -135,13 +147,6 @@ function fillInData(itemName, prevIndex, count)  --fills in the data
     -- price is in prices[itemName]
     -- stack size is in step[prevIndex+1]
     -- total size for all stacks of certain size is in stack_sizes[step[prevIndex+1]]
-
-
-    -- set auction sell to be Per Unit
-    -- AuctionFrameAuctions.priceType = 1;
-    -- UIDropDownMenu_SetSelectedValue(PriceDropDown, AuctionFrameAuctions.priceType)
-    PriceDropDownButton:Click("RightButton", false)
-    DropDownList1Button1:Click("RightButton", false)
 
     local price = prices[itemName] - UNDERCUT_AMOUNT
 
@@ -178,9 +183,18 @@ function fillInData(itemName, prevIndex, count)  --fills in the data
 
 end
 
+function setPerUnit()
+    -- set auction sell to be Per Unit
+    -- AuctionFrameAuctions.priceType = 1;
+    -- UIDropDownMenu_SetSelectedValue(PriceDropDown, AuctionFrameAuctions.priceType)
+    PriceDropDownButton:Click("RightButton", false)
+    DropDownList1Button1:Click("RightButton", false)
+end
+
 function calculateStackSizesAndStep(itemName, itemCount)  --calculates stacks
     local mats_percent = {}
     step = {}
+
     if(prices[itemName] >= EXPENSIVE_ITEM_THRESHOLD) then   -- more than 50g
         mats_percent = expensive_mats
         step = expensive_mats_step
