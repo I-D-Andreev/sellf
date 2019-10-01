@@ -1,10 +1,7 @@
 print("Sell fast loaded. Will scan on next AH opening.")
 local SHOULD_SCAN_AH = true
 
-local mats_array = {"Monelite Ore", "Storm Silver Ore", "Platinum Ore", "Osmenite Ore",
-                    "Riverbud", "Sea Stalk", "Star Moss", "Akunda's Bite", "Winter's Kiss",
-                    "Siren's Pollen", "Zin'anthid", "Anchor Weed"}
-
+local mats_array = {} -- later populated when scanning bag number 4 from right to left
 local prices = {}
 
 
@@ -22,8 +19,13 @@ frame1:SetScript("OnEvent", function(self, event, ...)
         SortAuctionSetSort("list", "unitprice", false)
         SortAuctionApplySort("list")
         -- set variables
+        mats_array={}
         itemNumber = 0
+        scanBag() -- scan items in bag 3 and add them to mats array
+        
+        
         for i=1, table.getn(mats_array) do already_updated_event[i] = false end
+
         queryAH()
     end
 end)
@@ -49,8 +51,29 @@ function scanAH()
         return
     end
 
+
     print("Scanning for item: "..mats_array[itemNumber])
     QueryAuctionItems(mats_array[itemNumber], nil, nil, 0, false, 0, false, false, nil) -- triggers event AUCTION_ITEM_LIST_UPDATE
+end
+
+function scanBag()
+    local bag=3 
+    local found_items={}
+    print("--------------------------------------------------------")
+    print("Scanning items in bag "..bag+1)
+    for slot=1, GetContainerNumSlots(bag) do
+        local id=GetContainerItemID(bag,slot)
+        if id~=nil then
+            local name=GetItemInfo(id)
+            found_items[name] = 1
+            print("Found item - "..name)
+        end
+    end
+
+    for key, _ in pairs(found_items) do
+        mats_array[#mats_array+1]=key
+    end
+    print("--------------------------------------------------------")
 end
 
 
