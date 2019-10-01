@@ -93,9 +93,11 @@ end)
 
 function getPrice()
     local name, _, count, _, _, _, _,minBid,_,buyoutPrice, _, _, _, owner, _, saleStatus, _, _=GetAuctionItemInfo("list", 1)
-    prices[mats_array[itemNumber]] = math.floor(buyoutPrice/count)
-    local g, s, c = copperConverter(prices[mats_array[itemNumber]])
-    print(name.."  -  "..g.."g "..s.."s "..c.."c")
+    if(name~=nil) then
+        prices[mats_array[itemNumber]] = math.floor(buyoutPrice/count)
+        local g, s, c = copperConverter(prices[mats_array[itemNumber]])
+        print(name.."  -  "..g.."g "..s.."s "..c.."c")
+    end
    queryAH() -- call for the next item
 end
 
