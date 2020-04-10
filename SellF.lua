@@ -8,7 +8,7 @@ local prices = {}
 ------------------------------------
 -----        SCANS AH         ------
 ------------------------------------
-local itemNumber = 0;   -- defined in the array above, keeps track of which item we are currently scanning for
+local item_number = 0;   -- defined in the array above, keeps track of which item we are currently scanning for
 local already_updated_event = {}
 local frame1 = CreateFrame("Frame")
 frame1:RegisterEvent("AUCTION_HOUSE_SHOW")
@@ -20,7 +20,7 @@ frame1:SetScript("OnEvent", function(self, event, ...)
         SortAuctionApplySort("list")
         -- set variables
         mats_array={}
-        itemNumber = 0
+        item_number = 0
         scanBag() -- scan items in bag 3 and add them to mats array
         
         
@@ -33,7 +33,7 @@ end)
 function queryAH()
     local canQuery,_ = CanSendAuctionQuery()
     if canQuery then
-        itemNumber = itemNumber + 1
+        item_number = item_number + 1
         scanAH()
     else
         C_Timer.After(0.3, function() queryAH() end)
@@ -41,7 +41,7 @@ function queryAH()
 end
 
 function scanAH()
-    if(itemNumber>table.getn(mats_array)) then
+    if(item_number>table.getn(mats_array)) then
         print("--------------------------------------------------------")
         print("             Finished Scanning")
         print("         SellF will not scan anymore")
@@ -52,8 +52,8 @@ function scanAH()
     end
 
 
-    print("Scanning for item: "..mats_array[itemNumber])
-    QueryAuctionItems(mats_array[itemNumber], nil, nil, 0, false, 0, false, false, nil) -- triggers event AUCTION_ITEM_LIST_UPDATE
+    print("Scanning for item: "..mats_array[item_number])
+    QueryAuctionItems(mats_array[item_number], nil, nil, 0, false, 0, false, false, nil) -- triggers event AUCTION_ITEM_LIST_UPDATE
 end
 
 function scanBag()
@@ -81,9 +81,9 @@ local frame3 = CreateFrame("Frame")
 frame3:RegisterEvent("AUCTION_ITEM_LIST_UPDATE")
 frame3:SetScript("OnEvent", function(self, event, ...)
     -- event is triggered when QueryAuctionItems is called
-    -- sometimes triggered twice, so already_updated_event[itemNumber] keeps track if has already been called
-    if not already_updated_event[itemNumber] then 
-        already_updated_event[itemNumber] = true
+    -- sometimes triggered twice, so already_updated_event[item_number] keeps track if has already been called
+    if not already_updated_event[item_number] then 
+        already_updated_event[item_number] = true
         getPrice()
     else
         return
@@ -94,8 +94,8 @@ end)
 function getPrice()
     local name, _, count, _, _, _, _,minBid,_,buyoutPrice, _, _, _, owner, _, saleStatus, _, _=GetAuctionItemInfo("list", 1)
     if(name~=nil) then
-        prices[mats_array[itemNumber]] = math.floor(buyoutPrice/count)
-        local g, s, c = copperConverter(prices[mats_array[itemNumber]])
+        prices[mats_array[item_number]] = math.floor(buyoutPrice/count)
+        local g, s, c = copperConverter(prices[mats_array[item_number]])
         print(name.."  -  "..g.."g "..s.."s "..c.."c")
     end
    queryAH() -- call for the next item
@@ -117,32 +117,28 @@ end
 ------------------------------------
 
 -- local cheap_mats    -- less than 50g
-    --stacks of i   will be total x% of all items
+    --stacks of a   will be total b% of all items
     local cheap_mats = {}
-    for i=1,50 do cheap_mats[i]=0 end
-    cheap_mats[5] = 20
-    cheap_mats[10] = 25
-    cheap_mats[20] = 30
-    cheap_mats[50] = 25
-    local cheap_mats_step = {5,10,20,50}
-
+    for i=1,5 do cheap_mats[i]=0 end
+    cheap_mats[1] = {5,20}
+    cheap_mats[2] = {10,25}
+    cheap_mats[3] = {20,30}
+    cheap_mats[4] = {50,25}
 
 -- local expensive_mats  -- more than 50g
-    --stacks of i   will be total  x% of all items
+    --stacks of a   will be total  b% of all items
     local expensive_mats = {}
     for i=1,5 do expensive_mats[i]=0 end
 
-    expensive_mats[1] = 10
-    expensive_mats[2] = 20
-    expensive_mats[3] = 30
-    expensive_mats[5] = 40
-    local expensive_mats_step = {1,2,3,5}
-local MAT_STACK_SIZES = 4
+    expensive_mats[1] = {1, 10}
+    expensive_mats[2] = {2, 20}
+    expensive_mats[3] = {3, 30}
+    expensive_mats[5] = {5, 40}
+local MAT_STACK_SIZES = 4  -- we split in 4 different listings
 
 -- based on cheap_mats or expensive_mats, when a new item is put, calculate the stack sizes
--- e.g. stack of 5s will be 25 in total, because we use cheap mats and we have a total count of 125 (applied percentage is 20%)
-    local stack_sizes = {}
-    local step = {}  -- either expensive_mats step or cheap_mats_step (used to loop over the right elements of the arrays)
+-- e.g. stack of 5s will be 25 in total, if we use cheap mats and we have a total count of 125 (applied percentage is 20%)
+local stack_sizes = {}
 
 local EXPENSIVE_ITEM_THRESHOLD = 500000  -- 50g
 local UNDERCUT_AMOUNT = 300 -- 3 silver
@@ -172,23 +168,23 @@ frame2:SetScript("OnEvent", function(self, event, ...)
 
 end)
 
-function fillInData(itemName, prevIndex, count)  --fills in the data
-    -- price is in prices[itemName]
-    -- stack size is in step[prevIndex+1]
-    -- total size for all stacks of certain size is in stack_sizes[step[prevIndex+1]]
+function fillInData(item_name, prev_index, count)  --fills in the data
+    -- price is in prices[item_name]
+    -- stack size is in stack_sizes[previousIndex+1][1]
+    -- total size for all stacks of certain size is in stack_sizes[prev_index+1][2]
 
-    local price = prices[itemName] - UNDERCUT_AMOUNT
+    local price = prices[item_name] - UNDERCUT_AMOUNT
 
     -- set buyout price
     MoneyInputFrame_SetCopper(StartPrice, price -1)
     MoneyInputFrame_SetCopper(BuyoutPrice, price)
 
     -- only calculate stack size up to the 4th listing (as we only have percentages for 4 listings)
-    if(prevIndex+1 <= MAT_STACK_SIZES) then
-        local current_index = prevIndex + 1
+    if(prev_index+1 <= MAT_STACK_SIZES) then
+        local current_index = prev_index + 1
 
-        local stack_size = step[current_index]
-        local num_stacks = math.floor(stack_sizes[step[current_index]] / stack_size)   -- total number / stack size
+        local stack_size = stack_sizes[current_index][1]
+        local num_stacks = math.floor(stack_sizes[current_index][2] / stack_size)   -- total number / stack size
         
         -- when selling a low amount of mats the percentages gets screwed (e.g. less than 25 cheap mats)
         -- so we will just sell everything with the lowest amount
@@ -204,7 +200,7 @@ function fillInData(itemName, prevIndex, count)  --fills in the data
         AuctionsStackSizeEntry:SetNumber(stack_size)
         AuctionsNumStacksEntry:SetNumber(num_stacks)
 
-        -- print("Name - "..itemName)
+        -- print("Name - "..item_name)
         -- print("Stack size - "..stack_size)
         -- print("Num stacks - "..num_stacks)
         -- print("Price - "..price)
@@ -220,21 +216,18 @@ function setPerUnit()
     DropDownList1Button1:Click("RightButton", false)
 end
 
-function calculateStackSizesAndStep(itemName, itemCount)  --calculates stacks
-    local mats_percent = {}
-    step = {}
+function calculateStackSizesAndStep(item_name, item_count)  --calculates stacks
+    local mats = {}
 
-    if(prices[itemName] >= EXPENSIVE_ITEM_THRESHOLD) then   -- more than 50g
-        mats_percent = expensive_mats
-        step = expensive_mats_step
+    if(prices[item_name] >= EXPENSIVE_ITEM_THRESHOLD) then   -- more than 50g
+        mats = expensive_mats
     else  -- less than 50g 
-        mats_percent = cheap_mats
-        step = cheap_mats_step
+        mats = cheap_mats
     end
 
     -- calculate how many total mats will be for each stack, when applying the correct percentages
     for i=1, MAT_STACK_SIZES do
-        stack_sizes[step[i]] = math.floor(itemCount * (mats_percent[step[i]]/100))
+        stack_sizes[i] = { mats[i][1], math.floor(item_count * (mats[i][2]/100))}
     end
 
 end
